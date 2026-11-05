@@ -1,0 +1,30 @@
+name: validate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Skill is discoverable by the skills CLI
+        run: |
+          out="$(npx -y skills add . --list 2>&1)"
+          echo "$out"
+          echo "$out" | grep -q "bootstrap-agents-knowledge"
+      - name: Relative links inside the skill resolve
+        run: |
+          cd skills/bootstrap-agents-knowledge
+          fail=0
+          for f in *.md; do
+            for link in $(grep -oE '\]\(([a-z-]+\.md)\)' "$f" | sed -E 's/\]\((.*)\)/\1/' | sort -u); do
+              [ -f "$link" ] || { echo "$f -> missing $link"; fail=1; }
+            done
+          done
+          exit $fail
